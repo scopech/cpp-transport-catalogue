@@ -8,7 +8,7 @@ namespace detail {
     
     std::string_view TrimRequest(std::string_view str) {
         const auto start = str.find_first_not_of(' ');
-        if (start == str.npos) {
+        if (start == std::string_view::npos) {
             return {};
         }
         return str.substr(start, str.find_last_not_of(' ') + 1 - start);
@@ -32,7 +32,8 @@ void ParseAndPrintStat(const transport::TransportCatalogue& transport_catalogue,
             output << "Bus " << bus_name << ": " 
                    << stat->stops_count << " stops on route, " 
                    << stat->unique_stops_count << " unique stops, " 
-                   << std::setprecision(6) << stat->route_length << " route length" << std::endl;
+                   << std::setprecision(6) << stat->route_length << " route length, "
+                   << std::setprecision(6) << stat->curvature << " curvature" << std::endl;
         } else {
             output << "Bus " << bus_name << ": not found" << std::endl;
         }
