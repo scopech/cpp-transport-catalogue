@@ -1,7 +1,5 @@
 #include "transport_catalogue.h"
 #include <numeric>
-#include <cmath>
-#include <limits>
 
 namespace transport {
 
@@ -13,16 +11,21 @@ void TransportCatalogue::AddStop(std::string_view name, geo::Coordinates coordin
     stop_to_buses_[stop_ptr]; 
 }
 
-void TransportCatalogue::AddBus(std::string_view name, const std::vector<std::string_view>& stop_names) {
+void TransportCatalogue::AddBus(std::string_view name, const std::vector<std::string_view>& stop_names, bool is_roundtrip) {
     domain::Bus bus;
     bus.name = std::string(name);
-    
+    bus.is_roundtrip = is_roundtrip;
     bus.stops.reserve(stop_names.size());
     
     for (const auto& stop_name : stop_names) {
-        const auto stop_ptr = FindStop(stop_name);
-        if (stop_ptr) {
+        if (const auto stop_ptr = FindStop(stop_name)) {
             bus.stops.push_back(stop_ptr);
+        }
+    }
+
+    if (!is_roundtrip && bus.stops.size() > 1) {
+        for (int i = static_cast<int>(bus.stops.size()) - 2; i >= 0; --i) {
+            bus.stops.push_back(bus.stops[i]);
         }
     }
 
@@ -40,30 +43,24 @@ void TransportCatalogue::SetDistance(const domain::Stop* from, const domain::Sto
 }
 
 double TransportCatalogue::GetDistance(const domain::Stop* from, const domain::Stop* to) const {
-    if (from == to) return 0.0;
-    
-    auto it = distances_.find({from, to});
-    if (it != distances_.end()) {
+    if (auto it = distances_.find({from, to}); it != distances_.end()) {
         return it->second;
     }
-    
-    it = distances_.find({to, from});
-    if (it != distances_.end()) {
+    if (auto it = distances_.find({to, from}); it != distances_.end()) {
         return it->second;
     }
-    
     return geo::ComputeDistance(from->coordinates, to->coordinates);
 }
 
 const domain::Bus* TransportCatalogue::FindBus(std::string_view name) const {
-    if (const auto it = busname_to_bus_.find(name); it != busname_to_bus_.end()) {
+    if (auto it = busname_to_bus_.find(name); it != busname_to_bus_.end()) {
         return it->second;
     }
     return nullptr;
 }
 
 const domain::Stop* TransportCatalogue::FindStop(std::string_view name) const {
-    if (const auto it = stopname_to_stop_.find(name); it != stopname_to_stop_.end()) {
+    if (auto it = stopname_to_stop_.find(name); it != stopname_to_stop_.end()) {
         return it->second;
     }
     return nullptr;
@@ -75,25 +72,20 @@ std::optional<domain::BusStat> TransportCatalogue::GetBusInfo(std::string_view b
         return std::nullopt;
     }
 
-    domain::BusStat stat;
+    domain::BusStat stat{};
     stat.stops_count = bus->stops.size();
     
     std::unordered_set<const domain::Stop*> unique_stops(bus->stops.begin(), bus->stops.end());
     stat.unique_stops_count = unique_stops.size();
 
     double road_length = 0.0;
-    for (size_t i = 1; i < bus->stops.size(); ++i) {
-        road_length += GetDistance(bus->stops[i - 1], bus->stops[i]);
-    }
-    stat.route_length = road_length;
-
     double geo_length = 0.0;
     for (size_t i = 1; i < bus->stops.size(); ++i) {
+        road_length += GetDistance(bus->stops[i - 1], bus->stops[i]);
         geo_length += geo::ComputeDistance(bus->stops[i - 1]->coordinates, bus->stops[i]->coordinates);
     }
-
-    stat.curvature = (geo_length > std::numeric_limits<double>::epsilon()) ? 
-                     road_length / geo_length : 0.0;
+    stat.route_length = road_length;
+    stat.curvature = (geo_length > 0) ? road_length / geo_length : 0.0;
 
     return stat;
 }
@@ -105,10 +97,18 @@ std::optional<domain::StopInfo> TransportCatalogue::GetStopInfo(std::string_view
     }
     auto it = stop_to_buses_.find(stop_ptr);
     if (it == stop_to_buses_.end()) {
-        static std::set<std::string_view> empty_set;
+        static const std::set<std::string_view> empty_set;
         return domain::StopInfo{ &empty_set };
     }
     return domain::StopInfo{ &it->second };
+}
+
+std::map<std::string_view, const domain::Bus*> TransportCatalogue::GetSortedAllBuses() const {
+    std::map<std::string_view, const domain::Bus*> result;
+    for (const auto& [name, bus_ptr] : busname_to_bus_) {
+        result[name] = bus_ptr;
+    }
+    return result;
 }
 
 } // namespace transport
