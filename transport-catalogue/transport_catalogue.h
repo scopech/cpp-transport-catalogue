@@ -1,43 +1,18 @@
 #pragma once
 
+#include "domain.h"
+
 #include <deque>
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <set>
+#include <map>
 #include <string_view>
 #include <optional>
-#include <utility>
-
-#include "geo.h"
 
 namespace transport {
-
-namespace domain {
-
-struct Stop {
-    std::string name;
-    geo::Coordinates coordinates;
-};
-
-struct Bus {
-    std::string name;
-    std::vector<const Stop*> stops;
-};
-
-struct BusStat {
-    size_t stops_count;
-    size_t unique_stops_count;
-    double route_length;
-    double curvature;
-};
-
-struct StopInfo {
-    const std::set<std::string_view>* buses;
-};
-
-} // namespace domain
 
 struct PairHasher {
     size_t operator()(const std::pair<const domain::Stop*, const domain::Stop*>& pair) const {
@@ -50,7 +25,7 @@ struct PairHasher {
 class TransportCatalogue {
 public:
     void AddStop(std::string_view name, geo::Coordinates coordinates);
-    void AddBus(std::string_view name, const std::vector<std::string_view>& stop_names);
+    void AddBus(std::string_view name, const std::vector<std::string_view>& stop_names, bool is_roundtrip);
     
     void SetDistance(const domain::Stop* from, const domain::Stop* to, double distance);
     double GetDistance(const domain::Stop* from, const domain::Stop* to) const;
@@ -59,8 +34,9 @@ public:
     const domain::Stop* FindStop(std::string_view name) const;
 
     std::optional<domain::BusStat> GetBusInfo(std::string_view bus_name) const;
-    
     std::optional<domain::StopInfo> GetStopInfo(std::string_view stop_name) const;
+
+    std::map<std::string_view, const domain::Bus*> GetSortedAllBuses() const;
 
 private:
     std::deque<domain::Stop> stops_;
