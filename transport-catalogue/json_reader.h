@@ -1,0 +1,21 @@
+#pragma once
+
+#include "json.h"
+#include "transport_catalogue.h"
+#include "request_handler.h"
+#include "map_renderer.h"
+#include <iostream>
+
+class JsonReader {
+public:
+    explicit JsonReader(std::istream& input);
+
+    void ProcessBaseRequests(transport::TransportCatalogue& catalogue) const;
+    renderer::RenderSettings ParseRenderSettings() const;
+    bool HasRenderSettings() const;
+    void ProcessStatRequests(const RequestHandler& handler, std::ostream& out) const;
+
+private:
+    json::Document document_;
+    svg::Color ParseColor(const json::Node& node) const;
+};
