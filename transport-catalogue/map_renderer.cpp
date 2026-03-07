@@ -24,6 +24,15 @@ svg::Document MapRenderer::Render(const std::map<std::string_view, const transpo
     SphereProjector proj(all_coords.begin(), all_coords.end(),
                          settings_.width, settings_.height, settings_.padding);
 
+    RenderRouteLines(doc, buses, proj);
+    RenderBusLabels(doc, buses, proj);
+    RenderStopSymbols(doc, used_stops, proj);
+    RenderStopLabels(doc, used_stops, proj);
+
+    return doc;
+}
+
+void MapRenderer::RenderRouteLines(svg::Document& doc, const std::map<std::string_view, const transport::domain::Bus*>& buses, const SphereProjector& proj) const {
     size_t color_idx = 0;
     for (const auto& [name, bus] : buses) {
         if (bus->stops.empty()) continue;
@@ -42,8 +51,10 @@ svg::Document MapRenderer::Render(const std::map<std::string_view, const transpo
         doc.Add(route_line);
         ++color_idx;
     }
+}
 
-    color_idx = 0;
+void MapRenderer::RenderBusLabels(svg::Document& doc, const std::map<std::string_view, const transport::domain::Bus*>& buses, const SphereProjector& proj) const {
+    size_t color_idx = 0;
     for (const auto& [name, bus] : buses) {
         if (bus->stops.empty()) continue;
 
@@ -76,15 +87,19 @@ svg::Document MapRenderer::Render(const std::map<std::string_view, const transpo
             if (end_stop != bus->stops.front()) add_bus_label(end_stop);
         }
     }
+}
 
-    for (const auto& [name, stop] : used_stops) {
+void MapRenderer::RenderStopSymbols(svg::Document& doc, const std::map<std::string_view, const transport::domain::Stop*>& stops, const SphereProjector& proj) const {
+    for (const auto& [name, stop] : stops) {
         svg::Circle circle;
         circle.SetCenter(proj(stop->coordinates))
               .SetRadius(settings_.stop_radius).SetFillColor("white");
         doc.Add(circle);
     }
+}
 
-    for (const auto& [name, stop] : used_stops) {
+void MapRenderer::RenderStopLabels(svg::Document& doc, const std::map<std::string_view, const transport::domain::Stop*>& stops, const SphereProjector& proj) const {
+    for (const auto& [name, stop] : stops) {
         svg::Point pos = proj(stop->coordinates);
 
         svg::Text underlayer;
@@ -101,8 +116,6 @@ svg::Document MapRenderer::Render(const std::map<std::string_view, const transpo
                   .SetFillColor("black");
         doc.Add(foreground);
     }
-
-    return doc;
 }
 
 } // namespace renderer
