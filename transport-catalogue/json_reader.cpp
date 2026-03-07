@@ -13,13 +13,21 @@ void JsonReader::ProcessBaseRequests(transport::TransportCatalogue& catalogue) c
     
     const auto& base_requests = root_dict.at("base_requests").AsArray();
 
+    ProcessStops(base_requests, catalogue);
+    ProcessDistances(base_requests, catalogue);
+    ProcessBuses(base_requests, catalogue);
+}
+
+void JsonReader::ProcessStops(const json::Array& base_requests, transport::TransportCatalogue& catalogue) const {
     for (const auto& req : base_requests) {
         const auto& dict = req.AsDict();
         if (dict.at("type").AsString() == "Stop") {
             catalogue.AddStop(dict.at("name").AsString(), {dict.at("latitude").AsDouble(), dict.at("longitude").AsDouble()});
         }
     }
+}
 
+void JsonReader::ProcessDistances(const json::Array& base_requests, transport::TransportCatalogue& catalogue) const {
     for (const auto& req : base_requests) {
         const auto& dict = req.AsDict();
         if (dict.at("type").AsString() == "Stop" && dict.count("road_distances")) {
@@ -30,7 +38,9 @@ void JsonReader::ProcessBaseRequests(transport::TransportCatalogue& catalogue) c
             }
         }
     }
+}
 
+void JsonReader::ProcessBuses(const json::Array& base_requests, transport::TransportCatalogue& catalogue) const {
     for (const auto& req : base_requests) {
         const auto& dict = req.AsDict();
         if (dict.at("type").AsString() == "Bus") {
