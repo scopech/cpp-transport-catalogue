@@ -88,8 +88,14 @@ class MapRenderer {
 public:
     MapRenderer(RenderSettings settings);
     svg::Document Render(const std::map<std::string_view, const transport::domain::Bus*>& buses) const;
+
 private:
     RenderSettings settings_;
+
+    void RenderRouteLines(svg::Document& doc, const std::map<std::string_view, const transport::domain::Bus*>& buses, const SphereProjector& proj) const;
+    void RenderBusLabels(svg::Document& doc, const std::map<std::string_view, const transport::domain::Bus*>& buses, const SphereProjector& proj) const;
+    void RenderStopSymbols(svg::Document& doc, const std::map<std::string_view, const transport::domain::Stop*>& stops, const SphereProjector& proj) const;
+    void RenderStopLabels(svg::Document& doc, const std::map<std::string_view, const transport::domain::Stop*>& stops, const SphereProjector& proj) const;
 };
 
 } // namespace renderer
