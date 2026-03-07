@@ -18,4 +18,7 @@ public:
 private:
     json::Document document_;
     svg::Color ParseColor(const json::Node& node) const;
+    void ProcessStops(const json::Array& base_requests, transport::TransportCatalogue& catalogue) const;
+    void ProcessDistances(const json::Array& base_requests, transport::TransportCatalogue& catalogue) const;
+    void ProcessBuses(const json::Array& base_requests, transport::TransportCatalogue& catalogue) const;
 };
