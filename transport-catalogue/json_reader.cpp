@@ -1,4 +1,5 @@
 #include "json_reader.h"
+#include "json_builder.h"
 #include <vector>
 #include <string>
 #include <sstream>
@@ -103,51 +104,55 @@ renderer::RenderSettings JsonReader::ParseRenderSettings() const {
 
 void JsonReader::ProcessStatRequests(const RequestHandler& handler, ostream& out) const {
     const auto& root_dict = document_.GetRoot().AsDict();
+    
     if (root_dict.count("stat_requests") == 0) {
-        json::Print(json::Document(json::Array{}), out);
+        json::Print(json::Document(json::Builder{}.StartArray().EndArray().Build()), out);
         return;
     }
 
-    json::Array responses;
+    json::Builder doc_builder;
+    doc_builder.StartArray();
+
     for (const auto& req : root_dict.at("stat_requests").AsArray()) {
         const auto& dict = req.AsDict();
         int request_id = dict.at("id").AsInt();
         const string& type = dict.at("type").AsString();
         
-        json::Dict response_dict;
-        response_dict["request_id"] = request_id;
+        json::Builder node_builder;
+        node_builder.StartDict()
+                    .Key("request_id"s).Value(request_id);
 
-        if (type == "Bus") {
+        if (type == "Bus"s) {
             const string& name = dict.at("name").AsString();
             auto stat = handler.GetBusStat(name);
             if (stat) {
-                response_dict["curvature"] = stat->curvature;
-                response_dict["route_length"] = stat->route_length;
-                response_dict["stop_count"] = static_cast<int>(stat->stops_count);
-                response_dict["unique_stop_count"] = static_cast<int>(stat->unique_stops_count);
+                node_builder.Key("curvature"s).Value(stat->curvature)
+                            .Key("route_length"s).Value(stat->route_length)
+                            .Key("stop_count"s).Value(static_cast<int>(stat->stops_count))
+                            .Key("unique_stop_count"s).Value(static_cast<int>(stat->unique_stops_count));
             } else {
-                response_dict["error_message"] = "not found"s;
+                node_builder.Key("error_message"s).Value("not found"s);
             }
-        } else if (type == "Stop") {
+        } else if (type == "Stop"s) {
             const string& name = dict.at("name").AsString();
             auto stat = handler.GetBusesByStop(name);
             if (stat) {
-                json::Array buses;
+                node_builder.Key("buses"s).StartArray();
                 for (const auto& bus : *stat->buses) {
-                    buses.push_back(string(bus));
+                    node_builder.Value(string(bus));
                 }
-                response_dict["buses"] = move(buses);
+                node_builder.EndArray();
             } else {
-                response_dict["error_message"] = "not found"s;
+                node_builder.Key("error_message"s).Value("not found"s);
             }
-        } else if (type == "Map") {
+        } else if (type == "Map"s) {
             ostringstream strm;
             handler.RenderMap().Render(strm);
-            response_dict["map"] = strm.str();
+            node_builder.Key("map"s).Value(strm.str());
         }
         
-        responses.push_back(json::Node(move(response_dict)));
+        doc_builder.Value(node_builder.EndDict().Build().AsDict());
     }
     
-    json::Print(json::Document(json::Node(move(responses))), out);
+    json::Print(json::Document(doc_builder.EndArray().Build()), out);
 }
