@@ -9,19 +9,17 @@ using namespace std;
 
 int main() {
     transport::TransportCatalogue catalogue;
-    JsonReader json_reader(cin);
     
-    json_reader.ProcessBaseRequests(catalogue);
-    
-    renderer::RenderSettings render_settings;
-    if (json_reader.HasRenderSettings()) {
-        render_settings = json_reader.ParseRenderSettings();
-    }
-    
-    renderer::MapRenderer renderer(render_settings);
-    RequestHandler handler(catalogue, renderer);
-    
-    json_reader.ProcessStatRequests(handler, cout);
-    
+    JsonReader reader(cin);
+
+    reader.ProcessBaseRequests(catalogue);
+
+    const auto render_settings = reader.ParseRenderSettings();
+    renderer::MapRenderer map_renderer(render_settings);
+
+    RequestHandler handler(catalogue, map_renderer);
+
+    reader.ProcessStatRequests(handler, cout);
+
     return 0;
 }
