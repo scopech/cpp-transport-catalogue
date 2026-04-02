@@ -102,6 +102,17 @@ renderer::RenderSettings JsonReader::ParseRenderSettings() const {
     return settings;
 }
 
+transport::RoutingSettings JsonReader::ParseRoutingSettings() const {
+    const auto& root_dict = document_.GetRoot().AsDict();
+    if (root_dict.count("routing_settings") == 0) return {};
+
+    const auto& dict = root_dict.at("routing_settings").AsDict();
+    transport::RoutingSettings settings;
+    settings.bus_wait_time = dict.at("bus_wait_time").AsInt();
+    settings.bus_velocity = dict.at("bus_velocity").AsDouble();
+    return settings;
+}
+
 void JsonReader::ProcessStatRequests(const RequestHandler& handler, ostream& out) const {
     const auto& root_dict = document_.GetRoot().AsDict();
     
@@ -149,6 +160,31 @@ void JsonReader::ProcessStatRequests(const RequestHandler& handler, ostream& out
             ostringstream strm;
             handler.RenderMap().Render(strm);
             node_builder.Key("map"s).Value(strm.str());
+        } else if (type == "Route"s) {
+            const string& from = dict.at("from").AsString();
+            const string& to = dict.at("to").AsString();
+            auto route_info = handler.GetRoute(from, to);
+            if (route_info) {
+                node_builder.Key("total_time"s).Value(route_info->total_time);
+                node_builder.Key("items"s).StartArray();
+                for (const auto& item : route_info->items) {
+                    node_builder.StartDict();
+                    if (item.type == "Wait") {
+                        node_builder.Key("type"s).Value("Wait"s)
+                                    .Key("stop_name"s).Value(item.name)
+                                    .Key("time"s).Value(item.time);
+                    } else if (item.type == "Bus") {
+                        node_builder.Key("type"s).Value("Bus"s)
+                                    .Key("bus"s).Value(item.name)
+                                    .Key("span_count"s).Value(item.span_count)
+                                    .Key("time"s).Value(item.time);
+                    }
+                    node_builder.EndDict();
+                }
+                node_builder.EndArray();
+            } else {
+                node_builder.Key("error_message"s).Value("not found"s);
+            }
         }
         
         doc_builder.Value(node_builder.EndDict().Build().AsDict());
