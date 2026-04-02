@@ -37,6 +37,7 @@ public:
     std::optional<domain::StopInfo> GetStopInfo(std::string_view stop_name) const;
 
     std::map<std::string_view, const domain::Bus*> GetSortedAllBuses() const;
+    std::map<std::string_view, const domain::Stop*> GetSortedAllStops() const;
 
 private:
     std::deque<domain::Stop> stops_;
