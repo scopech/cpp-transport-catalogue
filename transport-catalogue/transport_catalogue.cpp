@@ -111,4 +111,12 @@ std::map<std::string_view, const domain::Bus*> TransportCatalogue::GetSortedAllB
     return result;
 }
 
+std::map<std::string_view, const domain::Stop*> TransportCatalogue::GetSortedAllStops() const {
+    std::map<std::string_view, const domain::Stop*> result;
+    for (const auto& [name, stop_ptr] : stopname_to_stop_) {
+        result[name] = stop_ptr;
+    }
+    return result;
+}
+
 } // namespace transport
